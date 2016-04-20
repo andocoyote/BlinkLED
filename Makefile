@@ -1,197 +1,102 @@
-##########------------------------------------------------------##########
-##########              Project-specific Details                ##########
-##########    Check these every time you start a new project    ##########
-##########------------------------------------------------------##########
+# Name: Makefile
+# Author: Andrew Mikesell
+# Copyright: <insert your copyright message here>
+# License: <insert your license reference here>
 
-MCU   = atmega328p
-F_CPU = 8000000UL
-BAUD  = 9600UL
-## Also try BAUD = 19200 or 38400 if you're feeling lucky.
+# DEVICE ....... The AVR device you compile for
+# CLOCK ........ Target AVR clock rate in Hertz
+# OBJECTS ...... The object files created from your source files. This list is
+#                usually the same as the list of source files with suffix ".o".
+# PROGRAMMER ... Options to avrdude which define the hardware you use for
+#                uploading to the AVR and the interface where this hardware
+#                is connected.
+# FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
-MAIN = blinkLED.c
+INCLUDE_ROOT=c:\\WinAVR-20100110
 
-## A directory for common include files and the simple USART library.
-## If you move either the current folder or the Library folder, you'll
-##  need to change this path to match.
-LIBDIR = ../libraries/AVR-Programming-Library
+DEVICE     = atmega328p
+CLOCK      = 16000000
+BAUD       = 19200
+PROGRAMMER = -c arduino -P COM7 -b 19200
+OBJECTS    = blinkled.o
+FUSES      = -U lfuse:w:0xFF:m -U hfuse:w:0xde:m -U efuse:w:0x05:m
 
-##########------------------------------------------------------##########
-##########                 Programmer Defaults                  ##########
-##########          Set up once, then forget about it           ##########
-##########        (Can override.  See bottom of file.)          ##########
-##########------------------------------------------------------##########
+# A directory for common include files and the simple USART library.
+# If you move either the current folder or the Library folder, you'll 
+# need to change this path to match.
+LIBDIR=\
+	../libraries/AVR-Programming-Library
+#        $(INCLUDE_ROOT)\\AVR-Programming-master\\AVR-Programming-Library; \
+#        $(INCLUDE_ROOT)\\avr\\include\\avr;
 
-PROGRAMMER_TYPE = arduino
-# extra arguments to avrdude: baud rate, chip type, -F flag, etc.
-PROGRAMMER_ARGS = -P com7
-
-##########------------------------------------------------------##########
-##########                  Program Locations                   ##########
-##########     Won't need to change if they're in your PATH     ##########
-##########------------------------------------------------------##########
-
-CC = avr-gcc
-OBJCOPY = avr-objcopy
-OBJDUMP = avr-objdump
-AVRSIZE = avr-size
-AVRDUDE = avrdude
-
-##########------------------------------------------------------##########
-##########                   Makefile Magic!                    ##########
-##########         Summary:                                     ##########
-##########             We want a .hex file                      ##########
-##########        Compile source files into .elf                ##########
-##########        Convert .elf file into .hex                   ##########
-##########        You shouldn't need to edit below.             ##########
-##########------------------------------------------------------##########
-
-## The name of your project (without the .c)
-# TARGET = blinkLED
-## Or name it automatically after the enclosing directory
-TARGET = $(lastword $(subst /, ,$(CURDIR)))
-
-# Object files: will find all .c/.h files in current directory
-#  and in LIBDIR.  If you have any other (sub-)directories with code,
-#  you can add them in to SOURCES below in the wildcard statement.
 SOURCES=$(wildcard *.c $(LIBDIR)/*.c)
-OBJECTS=$(SOURCES:.c=.o)
-HEADERS=$(SOURCES:.c=.h)
-
-## Compilation options, type man avr-gcc if you're curious.
-CPPFLAGS = -DF_CPU=$(F_CPU) -DBAUD=$(BAUD) -I. -I$(LIBDIR)
-CFLAGS = -Os -g -std=gnu99 -Wall
-## Use short (8-bit) data types
-CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
-## Splits up object files per function
+CPPFLAGS = -DBAUD=$(BAUD) -I. -I$(LIBDIR)
 CFLAGS += -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,-Map,$(TARGET).map
-## Optional, but often ends up with smaller code
-LDFLAGS += -Wl,--gc-sections
-## Relax shrinks code even more, but makes disassembly messy
-## LDFLAGS += -Wl,--relax
-## LDFLAGS += -Wl,-u,vfprintf -lprintf_flt -lm  ## for floating-point printf
-## LDFLAGS += -Wl,-u,vfprintf -lprintf_min      ## for smaller printf
-TARGET_ARCH = -mmcu=$(MCU)
 
-## Explicit pattern rules:
-##  To make .o files from .c files
-%.o: %.c $(HEADERS) Makefile
-         $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c -o $@ $<;
+######################################################################
+######################################################################
 
-$(TARGET).elf: $(OBJECTS)
-        $(CC) $(LDFLAGS) $(TARGET_ARCH) $^ $(LDLIBS) -o $@
+# Tune the lines below only if you know what you are doing:
 
-%.hex: %.elf
-         $(OBJCOPY) -j .text -j .data -O ihex $< $@
+AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
+COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 
-%.eeprom: %.elf
-        $(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@
+# symbolic targets:
+all:	main.hex
 
-%.lst: %.elf
-        $(OBJDUMP) -S $< > $@
+# make the object file from the c file.
+# %.o is the target and so is $@
+# %.c is the prerequisite and so is $<
+# -c means compile the source into an object file but don't link object files into an executable
+# -o specifies the name of the object file to create
+# this will produce blinkled.o and this whole command will get resolved to this:
+#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -ffunction-sections -fdata-sections -DBAUD=19200 -I. -I<LIBDIR macro> -c blinkled.c -o blinkled.o
+%.o: %.c
+	$(COMPILE) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-## These targets don't have files named after them
-.PHONY: all disassemble disasm eeprom size clean squeaky_clean flash fuses
+.S.o:
+	$(COMPILE) -x assembler-with-cpp -c $< -o $@
+# "-x assembler-with-cpp" should not be necessary since this is the default
+# file type for the .S (with capital S) extension. However, upper case
+# characters are not always preserved on Windows. To ensure WinAVR
+# compatibility define the file type manually.
 
-all: $(TARGET).hex
+%.s: %.c
+	$(COMPILE) -S $< -o $@
 
-debug:
-        @echo
-        @echo "Source files:"   $(SOURCES)
-        @echo "MCU, F_CPU, BAUD:"  $(MCU), $(F_CPU), $(BAUD)
-        @echo
+flash:	all
+	$(AVRDUDE) -U flash:w:main.hex:i
 
-# Optionally create listing file from .elf
-# This creates approximate assembly-language equivalent of your code.
-# Useful for debugging time-sensitive bits,
-# or making sure the compiler does what you want.
-disassemble: $(TARGET).lst
+fuse:
+	$(AVRDUDE) $(FUSES)
 
-disasm: disassemble
+install: flash fuse
 
-# Optionally show how big the resulting program is
-size:  $(TARGET).elf
-        $(AVRSIZE) -C --mcu=$(MCU) $(TARGET).elf
+# if you use a bootloader, change the command below appropriately:
+load: all
+	bootloadHID main.hex
 
 clean:
-        rm -f $(TARGET).elf $(TARGET).hex $(TARGET).obj \
-        $(TARGET).o $(TARGET).d $(TARGET).eep $(TARGET).lst \
-        $(TARGET).lss $(TARGET).sym $(TARGET).map $(TARGET)~ \
-        $(TARGET).eeprom
+	rm -f main.hex main.elf $(OBJECTS)
 
-squeaky_clean:
-        rm -f *.elf *.hex *.obj *.o *.d *.eep *.lst *.lss *.sym *.map *~ *.eeprom
+# file targets:
+# this will produce main.elf and this whole command will get resolved to this:
+#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -o main.elf blinkled.o
+main.elf: $(OBJECTS)
+	$(COMPILE) -o main.elf $(OBJECTS)
 
-##########------------------------------------------------------##########
-##########              Programmer-specific details             ##########
-##########           Flashing code to AVR using avrdude         ##########
-##########------------------------------------------------------##########
+# The hex file is what actually gets flashed to the microcontroller
+# This command will produce main.hex
+main.hex: main.elf
+	rm -f main.hex
+	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
+# If you have an EEPROM section, you must also create a hex file for the
+# EEPROM and add it to the "flash" target.
 
-flash: $(TARGET).hex
-        $(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -U flash:w:$<
+# Targets for code debugging and analysis:
+disasm:	main.elf
+	avr-objdump -d main.elf
 
-## An alias
-program: flash
-
-flash_eeprom: $(TARGET).eeprom
-        $(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -U eeprom:w:$<
-
-avrdude_terminal:
-        $(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -nt
-
-## If you've got multiple programmers that you use,
-## you can define them here so that it's easy to switch.
-## To invoke, use something like `make flash_arduinoISP`
-flash_usbtiny: PROGRAMMER_TYPE = usbtiny
-flash_usbtiny: PROGRAMMER_ARGS =  # USBTiny works with no further arguments
-flash_usbtiny: flash
-
-flash_usbasp: PROGRAMMER_TYPE = usbasp
-flash_usbasp: PROGRAMMER_ARGS =  # USBasp works with no further arguments
-flash_usbasp: flash
-
-flash_arduinoISP: PROGRAMMER_TYPE = avrisp
-flash_arduinoISP: PROGRAMMER_ARGS = -b 19200 -P /dev/ttyACM0
-## (for windows) flash_arduinoISP: PROGRAMMER_ARGS = -b 19200 -P com5
-flash_arduinoISP: flash
-
-flash_109: PROGRAMMER_TYPE = avr109
-flash_109: PROGRAMMER_ARGS = -b 9600 -P /dev/ttyUSB0
-flash_109: flash
-
-##########------------------------------------------------------##########
-##########       Fuse settings and suitable defaults            ##########
-##########------------------------------------------------------##########
-
-## Mega 48, 88, 168, 328 default values
-LFUSE = 0x62
-HFUSE = 0xdf
-EFUSE = 0x00
-
-## Generic
-FUSE_STRING = -U lfuse:w:$(LFUSE):m -U hfuse:w:$(HFUSE):m -U efuse:w:$(EFUSE):m
-
-fuses:
-        $(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) \
-                   $(PROGRAMMER_ARGS) $(FUSE_STRING)
-show_fuses:
-        $(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -nv
-
-## Called with no extra definitions, sets to defaults
-set_default_fuses:  FUSE_STRING = -U lfuse:w:$(LFUSE):m -U hfuse:w:$(HFUSE):m -U efuse:w:$(EFUSE):m
-set_default_fuses:  fuses
-
-## Set the fuse byte for full-speed mode
-## Note: can also be set in firmware for modern chips
-set_fast_fuse: LFUSE = 0xE2
-set_fast_fuse: FUSE_STRING = -U lfuse:w:$(LFUSE):m
-set_fast_fuse: fuses
-
-## Set the EESAVE fuse byte to preserve EEPROM across flashes
-set_eeprom_save_fuse: HFUSE = 0xD7
-set_eeprom_save_fuse: FUSE_STRING = -U hfuse:w:$(HFUSE):m
-set_eeprom_save_fuse: fuses
-
-## Clear the EESAVE fuse byte
-clear_eeprom_save_fuse: FUSE_STRING = -U hfuse:w:$(HFUSE):m
-clear_eeprom_save_fuse: fuses
+# Use this to write in C++ and convert to C 
+cpp:
+	$(COMPILE) -E blinkled.c
