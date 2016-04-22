@@ -1,7 +1,7 @@
 # Name: Makefile
 # Author: Andrew Mikesell
-# Copyright: <insert your copyright message here>
-# License: <insert your license reference here>
+# Copyright: Ando Coyote 2016
+# License: Free for non-commercial use only
 
 # DEVICE ....... The AVR device you compile for
 # CLOCK ........ Target AVR clock rate in Hertz
@@ -21,7 +21,7 @@ PROGRAMMER = -c arduino -P COM7 -b 19200
 OBJECTS    = main.o
 
 # Fuses for external 16mhz crystal
-#FUSES      = -U lfuse:w:0xFF:m -U hfuse:w:0xDE:m -U efuse:w:0x05:m
+#FUSES = -U lfuse:w:0xFF:m -U hfuse:w:0xDE:m -U efuse:w:0x05:m
 
 # Fuses for internal clock
 FUSES = -U lfuse:w:0xE2:m -U hfuse:w:0xDF:m -U efuse:w:0x05:m
@@ -30,11 +30,11 @@ FUSES = -U lfuse:w:0xE2:m -U hfuse:w:0xDF:m -U efuse:w:0x05:m
 # If you move either the current folder or the Library folder, you'll 
 # need to change this path to match.
 LIBDIR=\
-	../libraries/AVR-Programming-Library
+        ../libraries/AVR-Programming-Library
 #        $(INCLUDE_ROOT)\\AVR-Programming-master\\AVR-Programming-Library; \
 #        $(INCLUDE_ROOT)\\avr\\include\\avr;
 
-SOURCES=$(wildcard *.c $(LIBDIR)/*.c)
+SOURCES = $(wildcard *.c $(LIBDIR)/*.c)
 CPPFLAGS = -DBAUD=$(BAUD) -I. -I$(LIBDIR)
 CFLAGS += -ffunction-sections -fdata-sections
 
@@ -49,7 +49,7 @@ COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 # symbolic targets:
 all:	main.hex
 
-# make the object file from the c file.
+# make the object file from the .c file.
 # %.o is the target and so is $@
 # %.c is the prerequisite and so is $<
 # -c means compile the source into an object file but don't link object files into an executable
