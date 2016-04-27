@@ -1,7 +1,7 @@
 # Name: Makefile
 # Author: Andrew Mikesell
-# Copyright: <insert your copyright message here>
-# License: <insert your license reference here>
+# Copyright: Ando Coyote 2016
+# License: Free for non-commercial use only
 
 # DEVICE ....... The AVR device you compile for
 # CLOCK ........ Target AVR clock rate in Hertz
@@ -18,18 +18,23 @@ DEVICE     = atmega328p
 CLOCK      = 16000000
 BAUD       = 19200
 PROGRAMMER = -c arduino -P COM7 -b 19200
-OBJECTS    = blinkled.o
-FUSES      = -U lfuse:w:0xFF:m -U hfuse:w:0xde:m -U efuse:w:0x05:m
+OBJECTS    = main.o
+
+# Fuses for external 16mhz crystal
+#FUSES = -U lfuse:w:0xFF:m -U hfuse:w:0xDE:m -U efuse:w:0x05:m
+
+# Fuses for internal clock
+FUSES = -U lfuse:w:0xE2:m -U hfuse:w:0xDF:m -U efuse:w:0x05:m
 
 # A directory for common include files and the simple USART library.
 # If you move either the current folder or the Library folder, you'll 
 # need to change this path to match.
 LIBDIR=\
-	../libraries/AVR-Programming-Library
+        ../libraries/AVR-Programming-Library
 #        $(INCLUDE_ROOT)\\AVR-Programming-master\\AVR-Programming-Library; \
 #        $(INCLUDE_ROOT)\\avr\\include\\avr;
 
-SOURCES=$(wildcard *.c $(LIBDIR)/*.c)
+SOURCES = $(wildcard *.c $(LIBDIR)/*.c)
 CPPFLAGS = -DBAUD=$(BAUD) -I. -I$(LIBDIR)
 CFLAGS += -ffunction-sections -fdata-sections
 
@@ -44,13 +49,13 @@ COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 # symbolic targets:
 all:	main.hex
 
-# make the object file from the c file.
+# make the object file from the .c file.
 # %.o is the target and so is $@
 # %.c is the prerequisite and so is $<
 # -c means compile the source into an object file but don't link object files into an executable
 # -o specifies the name of the object file to create
-# this will produce blinkled.o and this whole command will get resolved to this:
-#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -ffunction-sections -fdata-sections -DBAUD=19200 -I. -I<LIBDIR macro> -c blinkled.c -o blinkled.o
+# this will produce main.o and this whole command will get resolved to this:
+#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -ffunction-sections -fdata-sections -DBAUD=19200 -I. -I<LIBDIR macro> -c main.c -o main.o
 %.o: %.c
 	$(COMPILE) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
@@ -81,7 +86,7 @@ clean:
 
 # file targets:
 # this will produce main.elf and this whole command will get resolved to this:
-#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -o main.elf blinkled.o
+#   avr-gcc -Wall -Os -DF_CPU=16000000 -mmcu=atmega328p -o main.elf main.o
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS)
 
@@ -99,4 +104,4 @@ disasm:	main.elf
 
 # Use this to write in C++ and convert to C 
 cpp:
-	$(COMPILE) -E blinkled.c
+	$(COMPILE) -E main.c
